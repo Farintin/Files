@@ -1,6 +1,6 @@
 # Files – Architecture Overview (v0)
 
-Files is a Rust-powered native desktop file manager.
+Files is a Rust-powered native desktop file manager built on a core-first architecture.
 
 The project is structured around a core-first philosophy:
 All business logic lives in Rust.
