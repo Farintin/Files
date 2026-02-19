@@ -4,6 +4,7 @@ use crate::{errors::FilesError, filesystem::FileSystem, models::FileEntry};
 
 mod navigation;
 mod selection;
+mod sorting;
 
 #[derive(Debug)]
 pub struct AppState<F: FileSystem> {
@@ -35,8 +36,8 @@ impl<F: FileSystem> AppState<F> {
     pub fn refresh(&mut self) -> Result<(), FilesError> {
         let previous_selection = self.selected().map(|e| e.name.clone());
 
-        let entries = self.fs.read_directory(&self.current_directory)?;
-
+        let mut entries = self.fs.read_directory(&self.current_directory)?;
+        sorting::sort_entries(&mut entries);
         self.entries = entries;
 
         // Try to preserve selection if possible
