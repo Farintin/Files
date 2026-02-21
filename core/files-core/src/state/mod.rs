@@ -1,16 +1,21 @@
+use std::path::Path;
 use std::path::PathBuf;
 
 use crate::{errors::FilesError, filesystem::FileSystem, models::FileEntry};
+
+pub use command::Command;
 
 mod navigation;
 mod selection;
 mod sorting;
 
+pub mod command;
+
 #[derive(Debug)]
 pub struct AppState<F: FileSystem> {
-    pub current_directory: PathBuf,
-    pub entries: Vec<FileEntry>,
-    pub selected_index: Option<usize>,
+    current_directory: PathBuf,
+    entries: Vec<FileEntry>,
+    selected_index: Option<usize>,
     fs: F,
 }
 
@@ -27,13 +32,21 @@ impl<F: FileSystem> AppState<F> {
         }
     }
 
+    pub fn current_directory(&self) -> &Path {
+        &self.current_directory
+    }
+
+    pub fn entries(&self) -> &[FileEntry] {
+        &self.entries
+    }
+
     /// Returns the currently selected entry, if any.
     pub fn selected(&self) -> Option<&FileEntry> {
         self.selected_index
             .and_then(|index| self.entries.get(index))
     }
 
-    pub fn refresh(&mut self) -> Result<(), FilesError> {
+    pub(crate) fn refresh(&mut self) -> Result<(), FilesError> {
         let previous_selection = self.selected().map(|e| e.name.clone());
 
         let mut entries = self.fs.read_directory(&self.current_directory)?;
@@ -73,7 +86,7 @@ mod tests {
 
         let state = AppState::new(PathBuf::from("/tmp"), entries, fs);
 
-        assert_eq!(state.selected_index, Some(0));
+        assert_eq!(state.selected().unwrap().name, "file0");
     }
 
     #[test]
@@ -81,7 +94,7 @@ mod tests {
         let fs = MockFileSystem { entries: vec![] };
 
         let state = AppState::new(PathBuf::from("/tmp"), vec![], fs);
-        assert_eq!(state.selected_index, None);
+        assert!(state.selected().is_none());
     }
 
     #[test]

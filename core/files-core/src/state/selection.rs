@@ -2,7 +2,7 @@ use super::*;
 
 impl<F: FileSystem> AppState<F> {
     /// Moves selection to the next entry.
-    pub fn select_next(&mut self) {
+    pub(crate) fn select_next(&mut self) {
         if let Some(index) = self.selected_index
             && index + 1 < self.entries.len()
         {
@@ -11,7 +11,7 @@ impl<F: FileSystem> AppState<F> {
     }
 
     /// Moves selection to the previous entry.
-    pub fn select_previous(&mut self) {
+    pub(crate) fn select_previous(&mut self) {
         if let Some(index) = self.selected_index
             && index > 0
         {
@@ -37,10 +37,10 @@ mod tests {
         let mut state = AppState::new(PathBuf::from("/tmp"), entries, fs);
 
         state.select_next();
-        assert_eq!(state.selected_index, Some(1));
+        assert_eq!(state.selected().unwrap().name, "file1");
 
         state.select_previous();
-        assert_eq!(state.selected_index, Some(0));
+        assert_eq!(state.selected().unwrap().name, "file0");
     }
 
     #[test]
@@ -53,9 +53,9 @@ mod tests {
         let mut state = AppState::new(PathBuf::from("/tmp"), entries, fs);
 
         state.select_next();
-        assert_eq!(state.selected_index, Some(0));
+        assert_eq!(state.selected().unwrap().name, "file0");
 
         state.select_previous();
-        assert_eq!(state.selected_index, Some(0));
+        assert_eq!(state.selected().unwrap().name, "file0");
     }
 }

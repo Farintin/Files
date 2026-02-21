@@ -2,7 +2,7 @@ use super::*;
 
 impl<F: FileSystem> AppState<F> {
     /// Enters the currently selected directory, if it is a directory.
-    pub fn enter_selected_directory(&mut self) -> Result<(), FilesError> {
+    pub(crate) fn enter_selected_directory(&mut self) -> Result<(), FilesError> {
         let selected = match self.selected() {
             Some(entry) if entry.is_dir => entry,
             _ => return Ok(()), // Not a directory or nothing selected
@@ -13,7 +13,7 @@ impl<F: FileSystem> AppState<F> {
     }
 
     /// Moves to the parent directory, if it exists.
-    pub fn go_up(&mut self) -> Result<(), FilesError> {
+    pub(crate) fn go_up(&mut self) -> Result<(), FilesError> {
         if let Some(parent) = self.current_directory.parent() {
             self.current_directory = parent.to_path_buf();
             self.refresh()?;
@@ -26,6 +26,7 @@ impl<F: FileSystem> AppState<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
     use std::path::PathBuf;
 
     use crate::models::FileEntry;
@@ -39,7 +40,7 @@ mod tests {
 
         state.go_up().unwrap();
 
-        assert_eq!(state.current_directory, PathBuf::from("/tmp"));
+        assert_eq!(state.current_directory(), Path::new("/tmp"));
     }
 
     #[test]
@@ -56,6 +57,6 @@ mod tests {
 
         state.enter_selected_directory().unwrap();
 
-        assert_eq!(state.current_directory, PathBuf::from("/tmp/dir1"));
+        assert_eq!(state.current_directory(), Path::new("/tmp/dir1"));
     }
 }
