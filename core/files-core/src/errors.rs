@@ -16,6 +16,8 @@ impl fmt::Display for FilesError {
     }
 }
 
+impl std::error::Error for FilesError {}
+
 impl From<io::Error> for FilesError {
     fn from(err: io::Error) -> Self {
         FilesError::Io(err)

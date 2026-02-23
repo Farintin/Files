@@ -40,6 +40,10 @@ impl<F: FileSystem> AppState<F> {
         &self.entries
     }
 
+    pub fn selected_index(&self) -> Option<usize> {
+        self.selected_index
+    }
+
     /// Returns the currently selected entry, if any.
     pub fn selected(&self) -> Option<&FileEntry> {
         self.selected_index
