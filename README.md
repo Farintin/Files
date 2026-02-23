@@ -15,13 +15,22 @@ into a fully integrated desktop application.
 The Rust core provides:
 
 - Filesystem abstraction layer
-- Deterministic directory sorting (directories first, case-insensitive)
+- Deterministic directory sorting
 - Encapsulated navigation state
 - Command-driven mutation model
 - Fully tested state transitions
-- Clear module boundaries
 
-The foundation is stable and versioned.
+---
+
+**In Progress — v0.2.0 (TUI Adapter)**
+
+- ratatui-based terminal interface
+- Arrow-key navigation
+- Directory traversal (Enter / Backspace)
+- Real filesystem integration
+- Core-command integration validated
+
+The interface layer is intentionally thin and delegates all behavior to `files-core`.
 
 ---
 
