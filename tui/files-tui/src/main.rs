@@ -4,14 +4,14 @@ use std::time::Duration;
 use crossterm::{
     event::{self, Event, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Modifier, Style},
     widgets::{Block, Borders, List, ListItem, ListState},
-    Terminal,
 };
 
 use files_core::{
@@ -71,24 +71,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?;
 
         // Input handling
-        if event::poll(Duration::from_millis(200))? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => break,
-                    KeyCode::Down => {
-                        state.handle_command(Command::SelectNext)?;
-                    }
-                    KeyCode::Up => {
-                        state.handle_command(Command::SelectPrevious)?;
-                    }
-                    KeyCode::Enter => {
-                        state.handle_command(Command::Enter)?;
-                    }
-                    KeyCode::Backspace => {
-                        state.handle_command(Command::GoUp)?;
-                    }
-                    _ => {}
+        if event::poll(Duration::from_millis(200))?
+            && let Event::Key(key) = event::read()?
+        {
+            match key.code {
+                KeyCode::Char('q') => break,
+                KeyCode::Down => {
+                    state.handle_command(Command::SelectNext)?;
                 }
+                KeyCode::Up => {
+                    state.handle_command(Command::SelectPrevious)?;
+                }
+                KeyCode::Enter => {
+                    state.handle_command(Command::Enter)?;
+                }
+                KeyCode::Backspace => {
+                    state.handle_command(Command::GoUp)?;
+                }
+                _ => {}
             }
         }
     }
