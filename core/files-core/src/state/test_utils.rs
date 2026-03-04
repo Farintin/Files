@@ -11,6 +11,10 @@ impl FileSystem for MockFileSystem {
     fn read_directory(&self, _path: &Path) -> Result<Vec<FileEntry>, FilesError> {
         Ok(self.entries.clone())
     }
+
+    fn rename(&self, _from: &Path, _to: &Path) -> Result<(), FilesError> {
+        Ok(())
+    }
 }
 
 pub fn mock_entries(count: usize) -> Vec<FileEntry> {

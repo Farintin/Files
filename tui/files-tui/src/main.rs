@@ -4,46 +4,61 @@ use std::time::Duration;
 use crossterm::{
     event::{self, Event, KeyCode},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+
 use ratatui::{
-    Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
-    style::{Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, ListState},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    Terminal,
 };
 
 use files_core::{
     filesystem::{FileSystem, RealFileSystem},
-    state::{AppState, Command},
+    state::AppState,
 };
 
+mod app;
+use app::{Mode, TuiApp};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Terminal setup
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    terminal.hide_cursor()?;
 
-    // Initialize app state
     let fs = RealFileSystem;
     let cwd = std::env::current_dir()?;
     let entries = fs.read_directory(&cwd)?;
-    let mut state = AppState::new(cwd, entries, fs);
+    let state = AppState::new(cwd, entries, fs);
 
-    // Event loop
+    let mut app = TuiApp::new(state);
+
     loop {
         terminal.draw(|f| {
             let size = f.size();
 
+            // ========================
+            // LAYOUT (always 3 rows)
+            // ========================
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(1)])
+                .constraints([
+                    Constraint::Min(1),    // File list
+                    Constraint::Length(3), // Rename input
+                    Constraint::Length(1), // Status bar
+                ])
                 .split(size);
 
-            let items: Vec<ListItem> = state
+            // ========================
+            // FILE LIST
+            // ========================
+            let items: Vec<ListItem> = app
+                .state
                 .entries()
                 .iter()
                 .map(|e| {
@@ -57,43 +72,84 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .collect();
 
             let mut list_state = ListState::default();
-            list_state.select(state.selected_index());
+            list_state.select(app.state.selected_index());
 
             let list = List::new(items)
                 .block(
                     Block::default()
-                        .title(state.current_directory().to_string_lossy().to_string())
+                        .title(
+                            app.state
+                                .current_directory()
+                                .to_string_lossy()
+                                .to_string(),
+                        )
                         .borders(Borders::ALL),
                 )
                 .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
 
             f.render_stateful_widget(list, chunks[0], &mut list_state);
+
+            // ========================
+            // RENAME INPUT
+            // ========================
+            if app.mode == Mode::Rename {
+                let input = Paragraph::new(format!("Rename: {}", app.input_buffer))
+                    .block(Block::default().borders(Borders::ALL));
+
+                f.render_widget(input, chunks[1]);
+
+                // Cursor position
+                let x = chunks[1].x + 1 + 8 + app.cursor_position as u16;
+                let y = chunks[1].y + 1;
+
+                f.set_cursor(x, y);
+            }
+
+            // ========================
+            // STATUS BAR
+            // ========================
+            let total = app.state.entries().len();
+            let current = app.state.selected_index().map(|i| i + 1).unwrap_or(0);
+
+            let mode_label = match app.mode {
+                Mode::Normal => "NORMAL",
+                Mode::Rename => "RENAME",
+            };
+
+            let status_text = format!(
+                " {} | {}/{} | r:rename  ↑↓:move  Enter:open  Backspace:up  q:quit ",
+                mode_label, current, total
+            );
+
+            let status = Paragraph::new(status_text).style(
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            );
+
+            f.render_widget(status, chunks[2]);
         })?;
 
-        // Input handling
         if event::poll(Duration::from_millis(200))?
             && let Event::Key(key) = event::read()?
         {
-            match key.code {
-                KeyCode::Char('q') => break,
-                KeyCode::Down => {
-                    state.handle_command(Command::SelectNext)?;
+            if key.code == KeyCode::Char('q') && app.mode == Mode::Normal {
+                break;
+            }
+
+            let previous_mode = app.mode;
+            app.handle_key(key)?;
+
+            if previous_mode != app.mode {
+                match app.mode {
+                    Mode::Rename => terminal.show_cursor()?,
+                    Mode::Normal => terminal.hide_cursor()?,
                 }
-                KeyCode::Up => {
-                    state.handle_command(Command::SelectPrevious)?;
-                }
-                KeyCode::Enter => {
-                    state.handle_command(Command::Enter)?;
-                }
-                KeyCode::Backspace => {
-                    state.handle_command(Command::GoUp)?;
-                }
-                _ => {}
             }
         }
     }
 
-    // Restore terminal
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;

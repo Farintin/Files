@@ -8,6 +8,7 @@ pub enum Command {
     Enter,
     GoUp,
     Refresh,
+    Rename(String), // new
 }
 
 impl<F: FileSystem> AppState<F> {
@@ -24,6 +25,7 @@ impl<F: FileSystem> AppState<F> {
             Command::Enter => self.enter_selected_directory(),
             Command::GoUp => self.go_up(),
             Command::Refresh => self.refresh(),
+            Command::Rename(new_name) => self.rename_selected(new_name),
         }
     }
 }

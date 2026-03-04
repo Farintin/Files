@@ -13,10 +13,26 @@ impl<F: FileSystem> AppState<F> {
     }
 
     /// Moves to the parent directory, if it exists.
-    pub(crate) fn go_up(&mut self) -> Result<(), FilesError> {
-        if let Some(parent) = self.current_directory.parent() {
-            self.current_directory = parent.to_path_buf();
-            self.refresh()?;
+    pub fn go_up(&mut self) -> Result<(), FilesError> {
+        let parent = match self.current_directory.parent() {
+            Some(p) => p.to_path_buf(),
+            None => return Ok(()),
+        };
+
+        let previous_dir = self.current_directory.clone();
+
+        self.current_directory = parent;
+
+        let mut entries = self.fs.read_directory(&self.current_directory)?;
+        sorting::sort_entries(&mut entries);
+        self.entries = entries;
+
+        // 🔥 Select the directory we just came from
+        self.selected_index = self.entries.iter().position(|e| e.path == previous_dir);
+
+        // Fallback if not found
+        if self.selected_index.is_none() && !self.entries.is_empty() {
+            self.selected_index = Some(0);
         }
 
         Ok(())
