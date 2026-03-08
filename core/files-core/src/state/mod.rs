@@ -15,20 +15,20 @@ pub mod command;
 pub struct AppState<F: FileSystem> {
     current_directory: PathBuf,
     entries: Vec<FileEntry>,
-    selected_index: Option<usize>,
+    cursor_index: Option<usize>,
     fs: F,
 }
 
 impl<F: FileSystem> AppState<F> {
     /// Creates a new AppState for a given directory and its entries.
     pub fn new(current_directory: PathBuf, entries: Vec<FileEntry>, fs: F) -> Self {
-        let selected_index = if entries.is_empty() { None } else { Some(0) };
+        let cursor_index = if entries.is_empty() { None } else { Some(0) };
 
         Self {
             current_directory,
             entries,
-            selected_index,
             fs,
+            cursor_index,
         }
     }
 
@@ -40,18 +40,17 @@ impl<F: FileSystem> AppState<F> {
         &self.entries
     }
 
-    pub fn selected_index(&self) -> Option<usize> {
-        self.selected_index
+    pub fn cursor_index(&self) -> Option<usize> {
+        self.cursor_index
     }
 
     /// Returns the currently selected entry, if any.
-    pub fn selected(&self) -> Option<&FileEntry> {
-        self.selected_index
-            .and_then(|index| self.entries.get(index))
+    pub fn cursor(&self) -> Option<&FileEntry> {
+        self.cursor_index.and_then(|i| self.entries.get(i))
     }
 
     pub(crate) fn refresh(&mut self) -> Result<(), FilesError> {
-        let previous_selection = self.selected().map(|e| e.name.clone());
+        let previous_selection = self.cursor().map(|e| e.name.clone());
 
         let mut entries = self.fs.read_directory(&self.current_directory)?;
         sorting::sort_entries(&mut entries);
@@ -59,19 +58,19 @@ impl<F: FileSystem> AppState<F> {
 
         // Try to preserve selection if possible
         if let Some(name) = previous_selection {
-            self.selected_index = self.entries.iter().position(|e| e.name == name);
+            self.cursor_index = self.entries.iter().position(|e| e.name == name);
         }
 
         // If nothing selected and entries exist, select first
-        if self.selected_index.is_none() && !self.entries.is_empty() {
-            self.selected_index = Some(0);
+        if self.cursor_index.is_none() && !self.entries.is_empty() {
+            self.cursor_index = Some(0);
         }
 
         Ok(())
     }
 
     fn rename_selected(&mut self, new_name: String) -> Result<(), FilesError> {
-        let selected = match self.selected() {
+        let selected = match self.cursor() {
             Some(entry) => entry.clone(),
             None => return Ok(()),
         };
@@ -91,11 +90,32 @@ impl<F: FileSystem> AppState<F> {
         self.entries = entries;
 
         // 🔥 Explicitly reselect renamed file
-        self.selected_index = self.entries.iter().position(|e| e.path == new_path);
+        self.cursor_index = self.entries.iter().position(|e| e.path == new_path);
 
         // Fallback if somehow not found
-        if self.selected_index.is_none() && !self.entries.is_empty() {
-            self.selected_index = Some(0);
+        if self.cursor_index.is_none() && !self.entries.is_empty() {
+            self.cursor_index = Some(0);
+        }
+
+        Ok(())
+    }
+
+    pub fn delete_selected(&mut self) -> Result<(), FilesError> {
+        let selected = match self.cursor() {
+            Some(entry) => entry.clone(),
+            None => return Ok(()),
+        };
+
+        self.fs.delete(&selected.path)?;
+
+        self.refresh()?;
+
+        if self.entries.is_empty() {
+            self.cursor_index = None;
+        } else if let Some(i) = self.cursor_index
+            && i >= self.entries.len()
+        {
+            self.cursor_index = Some(self.entries.len() - 1);
         }
 
         Ok(())
@@ -121,7 +141,7 @@ mod tests {
 
         let state = AppState::new(PathBuf::from("/tmp"), entries, fs);
 
-        assert_eq!(state.selected().unwrap().name, "file0");
+        assert_eq!(state.cursor().unwrap().name, "file0");
     }
 
     #[test]
@@ -129,7 +149,7 @@ mod tests {
         let fs = MockFileSystem { entries: vec![] };
 
         let state = AppState::new(PathBuf::from("/tmp"), vec![], fs);
-        assert!(state.selected().is_none());
+        assert!(state.cursor().is_none());
     }
 
     #[test]
@@ -143,11 +163,11 @@ mod tests {
         let mut state = AppState::new(PathBuf::from("/tmp"), initial_entries, fs);
 
         state.select_next(); // select index 1
-        let selected_name = state.selected().unwrap().name.clone();
+        let selected_name = state.cursor().unwrap().name.clone();
 
         state.refresh().unwrap();
 
-        assert_eq!(state.selected().unwrap().name, selected_name);
+        assert_eq!(state.cursor().unwrap().name, selected_name);
     }
 
     #[test]
@@ -183,6 +203,6 @@ mod tests {
             .unwrap();
 
         // After refresh, selection should still exist
-        assert!(state.selected().is_some());
+        assert!(state.cursor().is_some());
     }
 }

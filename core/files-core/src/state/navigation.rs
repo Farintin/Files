@@ -3,7 +3,7 @@ use super::*;
 impl<F: FileSystem> AppState<F> {
     /// Enters the currently selected directory, if it is a directory.
     pub(crate) fn enter_selected_directory(&mut self) -> Result<(), FilesError> {
-        let selected = match self.selected() {
+        let selected = match self.cursor() {
             Some(entry) if entry.is_dir => entry,
             _ => return Ok(()), // Not a directory or nothing selected
         };
@@ -28,11 +28,11 @@ impl<F: FileSystem> AppState<F> {
         self.entries = entries;
 
         // 🔥 Select the directory we just came from
-        self.selected_index = self.entries.iter().position(|e| e.path == previous_dir);
+        self.cursor_index = self.entries.iter().position(|e| e.path == previous_dir);
 
         // Fallback if not found
-        if self.selected_index.is_none() && !self.entries.is_empty() {
-            self.selected_index = Some(0);
+        if self.cursor_index.is_none() && !self.entries.is_empty() {
+            self.cursor_index = Some(0);
         }
 
         Ok(())

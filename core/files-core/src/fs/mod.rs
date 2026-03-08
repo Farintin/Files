@@ -4,6 +4,8 @@ use std::path::Path;
 use crate::errors::FilesError;
 use crate::models::FileEntry;
 
+pub mod operations;
+
 /// Reads a directory and returns a sorted list of `FileEntry` objects.
 ///
 /// # Behavior

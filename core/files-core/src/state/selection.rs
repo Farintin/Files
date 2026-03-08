@@ -4,11 +4,11 @@ impl<F: FileSystem> AppState<F> {
     /// Moves selection to the next entry.
     pub(crate) fn select_next(&mut self) {
         if self.entries.is_empty() {
-            self.selected_index = None;
+            self.cursor_index = None;
             return;
         }
 
-        self.selected_index = Some(match self.selected_index {
+        self.cursor_index = Some(match self.cursor_index {
             Some(i) if i + 1 < self.entries.len() => i + 1,
             _ => 0,
         });
@@ -17,11 +17,11 @@ impl<F: FileSystem> AppState<F> {
     /// Moves selection to the previous entry.
     pub(crate) fn select_previous(&mut self) {
         if self.entries.is_empty() {
-            self.selected_index = None;
+            self.cursor_index = None;
             return;
         }
 
-        self.selected_index = Some(match self.selected_index {
+        self.cursor_index = Some(match self.cursor_index {
             Some(0) | None => self.entries.len() - 1,
             Some(i) => i - 1,
         });
@@ -55,10 +55,10 @@ mod tests {
         let mut state = AppState::new(PathBuf::from("/tmp"), entries, fs);
 
         state.select_next();
-        assert_eq!(state.selected().unwrap().name, "file1");
+        assert_eq!(state.cursor().unwrap().name, "file1");
 
         state.select_previous();
-        assert_eq!(state.selected().unwrap().name, "file0");
+        assert_eq!(state.cursor().unwrap().name, "file0");
     }
 
     #[test]
@@ -66,30 +66,30 @@ mod tests {
         let mut state = make_state_with_n_entries(1);
 
         state.select_next();
-        assert_eq!(state.selected_index, Some(0));
+        assert_eq!(state.cursor_index, Some(0));
 
         state.select_previous();
-        assert_eq!(state.selected_index, Some(0));
+        assert_eq!(state.cursor_index, Some(0));
     }
 
     #[test]
     fn select_next_wraps_to_top() {
         let mut state = make_state_with_n_entries(3);
 
-        state.selected_index = Some(2);
+        state.cursor_index = Some(2);
         state.select_next();
 
-        assert_eq!(state.selected_index, Some(0));
+        assert_eq!(state.cursor_index, Some(0));
     }
 
     #[test]
     fn select_previous_wraps_to_bottom() {
         let mut state = make_state_with_n_entries(3);
 
-        state.selected_index = Some(0);
+        state.cursor_index = Some(0);
         state.select_previous();
 
-        assert_eq!(state.selected_index, Some(2));
+        assert_eq!(state.cursor_index, Some(2));
     }
 
     #[test]
@@ -98,6 +98,6 @@ mod tests {
 
         state.select_next();
 
-        assert_eq!(state.selected_index, None);
+        assert_eq!(state.cursor_index, None);
     }
 }

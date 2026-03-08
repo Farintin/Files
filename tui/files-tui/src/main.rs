@@ -4,15 +4,15 @@ use std::time::Duration;
 use crossterm::{
     event::{self, Event, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Terminal,
 };
 
 use files_core::{
@@ -72,17 +72,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .collect();
 
             let mut list_state = ListState::default();
-            list_state.select(app.state.selected_index());
+            list_state.select(app.state.cursor_index());
 
             let list = List::new(items)
                 .block(
                     Block::default()
-                        .title(
-                            app.state
-                                .current_directory()
-                                .to_string_lossy()
-                                .to_string(),
-                        )
+                        .title(app.state.current_directory().to_string_lossy().to_string())
                         .borders(Borders::ALL),
                 )
                 .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
@@ -104,18 +99,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 f.set_cursor(x, y);
             }
+            // ========================
+            // DELETE CONFIRMATION
+            // ========================
+            if app.mode == Mode::ConfirmDelete {
+                if let Some(entry) = app.state.cursor() {
+                    let kind = if entry.is_dir { "directory" } else { "file" };
+                    let text = format!("Delete {} \"{}\"? (y/n)", kind, entry.name);
+
+                    let popup = Paragraph::new(text).block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .title("Confirm Delete"),
+                    );
+
+                    f.render_widget(popup, chunks[1]);
+                }
+            }
 
             // ========================
             // STATUS BAR
             // ========================
             let total = app.state.entries().len();
-            let current = app.state.selected_index().map(|i| i + 1).unwrap_or(0);
+            let current = app.state.cursor_index().map(|i| i + 1).unwrap_or(0);
 
             let mode_label = match app.mode {
                 Mode::Normal => "NORMAL",
                 Mode::Rename => "RENAME",
+                Mode::ConfirmDelete => "DELETE",
             };
-
             let status_text = format!(
                 " {} | {}/{} | r:rename  ↑↓:move  Enter:open  Backspace:up  q:quit ",
                 mode_label, current, total
@@ -145,6 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match app.mode {
                     Mode::Rename => terminal.show_cursor()?,
                     Mode::Normal => terminal.hide_cursor()?,
+                    Mode::ConfirmDelete => terminal.hide_cursor()?,
                 }
             }
         }

@@ -6,6 +6,7 @@ use files_core::state::{AppState, Command};
 pub enum Mode {
     Normal,
     Rename,
+    ConfirmDelete,
 }
 
 pub struct TuiApp<F: FileSystem> {
@@ -31,8 +32,11 @@ impl<F: FileSystem> TuiApp<F> {
             // NORMAL MODE
             // ========================
             Mode::Normal => match key.code {
+                KeyCode::Char('d') => {
+                    self.mode = Mode::ConfirmDelete;
+                }
                 KeyCode::Char('r') => {
-                    if let Some(entry) = self.state.selected() {
+                    if let Some(entry) = self.state.cursor() {
                         self.input_buffer = entry.name.clone();
 
                         // Place cursor before extension (if file)
@@ -50,11 +54,11 @@ impl<F: FileSystem> TuiApp<F> {
                 }
 
                 KeyCode::Down => {
-                    self.state.handle_command(Command::SelectNext)?;
+                    self.state.handle_command(Command::MoveCursorDown)?;
                 }
 
                 KeyCode::Up => {
-                    self.state.handle_command(Command::SelectPrevious)?;
+                    self.state.handle_command(Command::MoveCursorUp)?;
                 }
 
                 KeyCode::Enter => {
@@ -117,6 +121,20 @@ impl<F: FileSystem> TuiApp<F> {
                     self.cursor_position += 1;
                 }
 
+                _ => {}
+            },
+
+            // ========================
+            // DELETE MODE
+            // ========================
+            Mode::ConfirmDelete => match key.code {
+                KeyCode::Char('y') => {
+                    self.state.handle_command(Command::Delete)?;
+                    self.mode = Mode::Normal;
+                }
+                KeyCode::Char('n') | KeyCode::Esc => {
+                    self.mode = Mode::Normal;
+                }
                 _ => {}
             },
         }

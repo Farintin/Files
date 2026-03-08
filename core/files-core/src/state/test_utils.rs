@@ -1,3 +1,4 @@
+use std::io;
 use std::path::Path;
 
 use crate::{errors::FilesError, filesystem::FileSystem, models::FileEntry};
@@ -13,6 +14,9 @@ impl FileSystem for MockFileSystem {
     }
 
     fn rename(&self, _from: &Path, _to: &Path) -> Result<(), FilesError> {
+        Ok(())
+    }
+    fn delete(&self, _path: &Path) -> io::Result<()> {
         Ok(())
     }
 }
