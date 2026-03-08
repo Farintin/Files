@@ -102,19 +102,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // ========================
             // DELETE CONFIRMATION
             // ========================
-            if app.mode == Mode::ConfirmDelete {
-                if let Some(entry) = app.state.cursor() {
-                    let kind = if entry.is_dir { "directory" } else { "file" };
-                    let text = format!("Delete {} \"{}\"? (y/n)", kind, entry.name);
+            if app.mode == Mode::ConfirmDelete
+                && let Some(entry) = app.state.cursor()
+            {
+                let kind = if entry.is_dir { "directory" } else { "file" };
+                let text = format!("Delete {} \"{}\"? (y/n)", kind, entry.name);
 
-                    let popup = Paragraph::new(text).block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .title("Confirm Delete"),
-                    );
+                let popup = Paragraph::new(text).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title("Confirm Delete"),
+                );
 
-                    f.render_widget(popup, chunks[1]);
-                }
+                f.render_widget(popup, chunks[1]);
             }
 
             // ========================
