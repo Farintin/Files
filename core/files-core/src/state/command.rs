@@ -10,6 +10,8 @@ pub enum Command {
     Refresh,
     Rename(String),
     Delete,
+    CreateFile(String),
+    CreateDirectory(String),
 }
 
 impl<F: FileSystem> AppState<F> {
@@ -31,6 +33,8 @@ impl<F: FileSystem> AppState<F> {
                 self.delete_selected()?;
                 Ok(())
             }
+            Command::CreateFile(name) => self.create_file(name),
+            Command::CreateDirectory(name) => self.create_directory(name),
         }
     }
 }

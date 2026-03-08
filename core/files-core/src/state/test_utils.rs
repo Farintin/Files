@@ -19,6 +19,13 @@ impl FileSystem for MockFileSystem {
     fn delete(&self, _path: &Path) -> io::Result<()> {
         Ok(())
     }
+    fn create_file(&self, _path: &Path) -> Result<(), FilesError> {
+        Ok(())
+    }
+
+    fn create_dir(&self, _path: &Path) -> Result<(), FilesError> {
+        Ok(())
+    }
 }
 
 pub fn mock_entries(count: usize) -> Vec<FileEntry> {

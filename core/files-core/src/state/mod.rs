@@ -120,6 +120,26 @@ impl<F: FileSystem> AppState<F> {
 
         Ok(())
     }
+
+    pub fn create_file(&mut self, name: String) -> Result<(), FilesError> {
+        let mut path = self.current_directory.clone();
+        path.push(&name);
+
+        self.fs.create_file(&path)?;
+
+        self.refresh()?;
+        Ok(())
+    }
+
+    pub fn create_directory(&mut self, name: String) -> Result<(), FilesError> {
+        let mut path = self.current_directory.clone();
+        path.push(&name);
+
+        self.fs.create_dir(&path)?;
+
+        self.refresh()?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

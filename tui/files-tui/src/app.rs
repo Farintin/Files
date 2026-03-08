@@ -3,9 +3,16 @@ use files_core::filesystem::FileSystem;
 use files_core::state::{AppState, Command};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputKind {
+    Rename,
+    CreateFile,
+    CreateDirectory,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
     Normal,
-    Rename,
+    Input(InputKind),
     ConfirmDelete,
 }
 
@@ -32,6 +39,17 @@ impl<F: FileSystem> TuiApp<F> {
             // NORMAL MODE
             // ========================
             Mode::Normal => match key.code {
+                KeyCode::Char('n') => {
+                    self.input_buffer.clear();
+                    self.cursor_position = 0;
+                    self.mode = Mode::Input(InputKind::CreateFile)
+                }
+
+                KeyCode::Char('N') => {
+                    self.input_buffer.clear();
+                    self.cursor_position = 0;
+                    self.mode = Mode::Input(InputKind::CreateDirectory);
+                }
                 KeyCode::Char('d') => {
                     self.mode = Mode::ConfirmDelete;
                 }
@@ -49,7 +67,7 @@ impl<F: FileSystem> TuiApp<F> {
                             };
                         }
 
-                        self.mode = Mode::Rename;
+                        self.mode = Mode::Input(InputKind::Rename);
                     }
                 }
 
@@ -77,9 +95,20 @@ impl<F: FileSystem> TuiApp<F> {
             },
 
             // ========================
-            // RENAME MODE
+            // DELETE MODE
             // ========================
-            Mode::Rename => match key.code {
+            Mode::ConfirmDelete => match key.code {
+                KeyCode::Char('y') => {
+                    self.state.handle_command(Command::Delete)?;
+                    self.mode = Mode::Normal;
+                }
+                KeyCode::Char('n') | KeyCode::Esc => {
+                    self.mode = Mode::Normal;
+                }
+                _ => {}
+            },
+
+            Mode::Input(kind) => match key.code {
                 KeyCode::Esc => {
                     self.mode = Mode::Normal;
                     self.input_buffer.clear();
@@ -87,14 +116,7 @@ impl<F: FileSystem> TuiApp<F> {
                 }
 
                 KeyCode::Enter => {
-                    if !self.input_buffer.trim().is_empty() {
-                        self.state
-                            .handle_command(Command::Rename(self.input_buffer.clone()))?;
-                    }
-
-                    self.mode = Mode::Normal;
-                    self.input_buffer.clear();
-                    self.cursor_position = 0;
+                    self.submit_input(kind)?;
                 }
 
                 KeyCode::Left => {
@@ -123,21 +145,36 @@ impl<F: FileSystem> TuiApp<F> {
 
                 _ => {}
             },
-
-            // ========================
-            // DELETE MODE
-            // ========================
-            Mode::ConfirmDelete => match key.code {
-                KeyCode::Char('y') => {
-                    self.state.handle_command(Command::Delete)?;
-                    self.mode = Mode::Normal;
-                }
-                KeyCode::Char('n') | KeyCode::Esc => {
-                    self.mode = Mode::Normal;
-                }
-                _ => {}
-            },
         }
+
+        Ok(())
+    }
+
+    fn submit_input(&mut self, kind: InputKind) -> Result<(), Box<dyn std::error::Error>> {
+        if self.input_buffer.trim().is_empty() {
+            return Ok(());
+        }
+
+        match kind {
+            InputKind::Rename => {
+                self.state
+                    .handle_command(Command::Rename(self.input_buffer.clone()))?;
+            }
+
+            InputKind::CreateFile => {
+                self.state
+                    .handle_command(Command::CreateFile(self.input_buffer.clone()))?;
+            }
+
+            InputKind::CreateDirectory => {
+                self.state
+                    .handle_command(Command::CreateDirectory(self.input_buffer.clone()))?;
+            }
+        }
+
+        self.input_buffer.clear();
+        self.cursor_position = 0;
+        self.mode = Mode::Normal;
 
         Ok(())
     }

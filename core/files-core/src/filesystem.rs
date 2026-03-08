@@ -10,6 +10,10 @@ pub trait FileSystem {
     fn rename(&self, from: &Path, to: &Path) -> Result<(), FilesError>;
 
     fn delete(&self, path: &Path) -> io::Result<()>;
+
+    fn create_file(&self, path: &Path) -> Result<(), FilesError>;
+
+    fn create_dir(&self, path: &Path) -> Result<(), FilesError>;
 }
 
 pub struct RealFileSystem;
@@ -20,7 +24,7 @@ impl FileSystem for RealFileSystem {
     }
 
     fn rename(&self, from: &Path, to: &Path) -> Result<(), FilesError> {
-        std::fs::rename(from, to).map_err(FilesError::from)
+        fs::rename(from, to).map_err(FilesError::from)
     }
 
     fn delete(&self, path: &Path) -> io::Result<()> {
@@ -29,5 +33,15 @@ impl FileSystem for RealFileSystem {
         } else {
             fs::remove_file(path)
         }
+    }
+
+    fn create_file(&self, path: &Path) -> Result<(), FilesError> {
+        fs::File::create(path)?;
+        Ok(())
+    }
+
+    fn create_dir(&self, path: &Path) -> Result<(), FilesError> {
+        fs::create_dir(path)?;
+        Ok(())
     }
 }

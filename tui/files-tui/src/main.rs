@@ -21,7 +21,7 @@ use files_core::{
 };
 
 mod app;
-use app::{Mode, TuiApp};
+use app::{InputKind, Mode, TuiApp};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
@@ -87,14 +87,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // ========================
             // RENAME INPUT
             // ========================
-            if app.mode == Mode::Rename {
-                let input = Paragraph::new(format!("Rename: {}", app.input_buffer))
+            if let Mode::Input(kind) = app.mode {
+                let label = match kind {
+    InputKind::Rename => "Rename",
+    InputKind::CreateFile => "New file",
+    InputKind::CreateDirectory => "New directory",
+};
+
+                let input = Paragraph::new(format!("{}: {}", label, app.input_buffer))
                     .block(Block::default().borders(Borders::ALL));
 
                 f.render_widget(input, chunks[1]);
+                let label_len = match kind {
+    InputKind::Rename => 8,
+    InputKind::CreateFile => 10,
+    InputKind::CreateDirectory => 15,
+};
 
                 // Cursor position
-                let x = chunks[1].x + 1 + 8 + app.cursor_position as u16;
+                let x = chunks[1].x + 1 + label_len + app.cursor_position as u16;
                 let y = chunks[1].y + 1;
 
                 f.set_cursor(x, y);
@@ -123,15 +134,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let total = app.state.entries().len();
             let current = app.state.cursor_index().map(|i| i + 1).unwrap_or(0);
 
-            let mode_label = match app.mode {
-                Mode::Normal => "NORMAL",
-                Mode::Rename => "RENAME",
-                Mode::ConfirmDelete => "DELETE",
-            };
-            let status_text = format!(
-                " {} | {}/{} | r:rename  ↑↓:move  Enter:open  Backspace:up  q:quit ",
-                mode_label, current, total
-            );
+            let status_text = match app.mode {
+    Mode::Normal => format!(
+        " NORMAL | {}/{} | r:rename n:new-file N:new-dir d:delete ↑↓:move Enter:open Backspace:up q:quit ",
+        current, total
+    ),
+
+    Mode::Input(InputKind::Rename) => format!(
+        " RENAME | {}/{} | type new name • Enter:confirm • Esc:cancel ",
+        current, total
+    ),
+
+    Mode::Input(InputKind::CreateFile) => format!(
+        " CREATE FILE | {}/{} | type file name • Enter:create • Esc:cancel ",
+        current, total
+    ),
+
+    Mode::Input(InputKind::CreateDirectory) => format!(
+        " CREATE DIR | {}/{} | type directory name • Enter:create • Esc:cancel ",
+        current, total
+    ),
+
+    Mode::ConfirmDelete => format!(
+        " DELETE | {}/{} | y:confirm • n/Esc:cancel ",
+        current, total
+    ),
+};
 
             let status = Paragraph::new(status_text).style(
                 Style::default()
@@ -155,7 +183,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if previous_mode != app.mode {
                 match app.mode {
-                    Mode::Rename => terminal.show_cursor()?,
+                    Mode::Input(_) => terminal.show_cursor()?,
                     Mode::Normal => terminal.hide_cursor()?,
                     Mode::ConfirmDelete => terminal.hide_cursor()?,
                 }

@@ -16,7 +16,8 @@ pub fn create_file(path: &Path) -> io::Result<()> {
 }
 
 pub fn create_dir(path: &Path) -> io::Result<()> {
-    fs::create_dir(path)
+    fs::create_dir(path)?;
+    Ok(())
 }
 
 pub fn rename(from: &Path, to: &Path) -> io::Result<()> {
