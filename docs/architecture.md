@@ -62,14 +62,21 @@ Thin layer. No business logic.
 
 ---
 
-### files-desktop (Planned)
+## Architecture
 
-Tauri-based desktop interface:
+The project is split into two crates:
 
-- Window management
-- IPC boundary
-- Rendering
-- OS integration (shortcuts, drag & drop)
+files-core
+
+- filesystem abstraction
+- application state
+- command system
+
+files-tui
+
+- terminal UI
+- input handling
+- rendering
 
 ---
 

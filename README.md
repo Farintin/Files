@@ -60,12 +60,32 @@ The project is structured in vertical layers:
 - Keyboard-driven navigation
 - End-to-end vertical slice validation
 
-### Later
+## Features
 
-- Desktop UI integration (Tauri)
-- Extended file operations (rename, delete)
-- Filtering and search
-- Cross-platform packaging
+Current capabilities:
+
+- Navigate directories
+- Open folders
+- Rename files and directories
+- Create files
+- Create directories
+- Delete with confirmation prompt
+- Keyboard-first navigation
+
+## Keybindings
+
+Normal Mode
+
+↑ ↓ Move cursor
+Enter Open directory
+Backspace Go to parent directory
+
+r Rename
+n New file
+N New directory
+d Delete
+
+q Quit
 
 ---
 
